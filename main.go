@@ -13,8 +13,6 @@ type Test struct {
 	Func func()
 }
 
-var aesKey = []byte("12345678901234567890123456789012")
-
 func NewRand(len int) []byte {
 	data := make([]byte, len)
 	actual, err := rand.Read(data)
@@ -35,7 +33,7 @@ func NewAES(payloadLen int) func() {
 	input := NewRand(payloadLen)
 	output := make([]byte, payloadLen)
 
-	return func() { cipher.Encrypt(output, input) /* just re-use aesKey as plain-text, who cares */}
+	return func() { cipher.Encrypt(output, input) }
 }
 
 func main() {
