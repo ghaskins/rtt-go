@@ -4,11 +4,21 @@ import (
 	"fmt"
 	"flag"
 	"time"
+	"crypto/aes"
 )
 
 type Test struct {
 	Name string
 	Func func()
+}
+
+var aesKey = []byte("12345678901234567890123456789012")
+
+func NewAES() func() {
+	cipher, _ := aes.NewCipher(aesKey)
+	output := make([]byte, len(aesKey))
+
+	return func() { cipher.Encrypt(output, aesKey) /* just re-use aesKey as plain-text, who cares */}
 }
 
 func main() {
@@ -19,6 +29,7 @@ func main() {
 	tests := []Test{
 		Test{"null", func() {} },
 		//Test{"timer validation", func() { time.Sleep(100 * time.Microsecond)} },
+		Test{"AES", NewAES() },
 	}
 
 	fmt.Printf("iterations: %d\n", iterations)
