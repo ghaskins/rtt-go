@@ -5,6 +5,7 @@ import (
 	"flag"
 	"time"
 	"crypto/aes"
+	"crypto/rand"
 )
 
 type Test struct {
@@ -14,22 +15,39 @@ type Test struct {
 
 var aesKey = []byte("12345678901234567890123456789012")
 
-func NewAES() func() {
-	cipher, _ := aes.NewCipher(aesKey)
-	output := make([]byte, len(aesKey))
+func NewRand(len int) []byte {
+	data := make([]byte, len)
+	actual, err := rand.Read(data)
 
-	return func() { cipher.Encrypt(output, aesKey) /* just re-use aesKey as plain-text, who cares */}
+	if err != nil {
+		panic(err.Error())
+	}
+
+	if actual != len {
+		panic(fmt.Sprintf("short read"))
+	}
+
+	return data
+}
+
+func NewAES(payloadLen int) func() {
+	cipher, _ := aes.NewCipher(NewRand(32))
+	input := NewRand(payloadLen)
+	output := make([]byte, payloadLen)
+
+	return func() { cipher.Encrypt(output, input) /* just re-use aesKey as plain-text, who cares */}
 }
 
 func main() {
 	iterations := *flag.Int("iterations", 10000, "the number of iterations per test")
+	payloadLen := *flag.Int("payload", 256 * 1024, "the size of the payload to use")
 
 	flag.Parse();
 
 	tests := []Test{
 		Test{"null", func() {} },
 		//Test{"timer validation", func() { time.Sleep(100 * time.Microsecond)} },
-		Test{"AES", NewAES() },
+		Test{"AES", NewAES(payloadLen) },
 	}
 
 	fmt.Printf("iterations: %d\n", iterations)
