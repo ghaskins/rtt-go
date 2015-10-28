@@ -39,6 +39,12 @@ func NewAES(payloadLen int) func() {
 	return func() { cipher.Encrypt(output, input) }
 }
 
+func NewSHA256(payloadLen int) func() {
+	input := NewRand(payloadLen)
+
+	return func() { sha256.Sum256(input) }
+}
+
 func NewECDSA(payloadLen int) func() {
 	pubkeyCurve := elliptic.P384()
 
@@ -50,7 +56,6 @@ func NewECDSA(payloadLen int) func() {
 
 	return func() {
 			digestB := sha256.Sum256(input)
-			//var _, _, _ = sigA, sigB, digestB
 			verified := ecdsa.Verify(&privatekey.PublicKey, digestB[:], sigA, sigB)
 			if verified == false {
 				panic("signature verification failed")
@@ -68,7 +73,8 @@ func main() {
 		Test{"null", func() {} },
 		//Test{"timer validation", func() { time.Sleep(100 * time.Microsecond)} },
 		Test{"AES", NewAES(*payloadLen) },
-		Test{"ECDSA", NewECDSA(*payloadLen) },
+		Test{"SHA256", NewSHA256(*payloadLen) },
+		Test{"ECDSA verify", NewECDSA(*payloadLen) },
 	}
 
 	fmt.Printf("iterations: %d payloadLen: %d\n", *iterations, *payloadLen)
