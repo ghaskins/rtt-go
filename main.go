@@ -85,8 +85,12 @@ func main() {
 			test.Func()
 		}
 		t1 := time.Now()
+		delta := t1.Sub(t0).Nanoseconds()
+		rtt := int(delta)/(*iterations)
+		ops := 1000000000/rtt
+		bandwidth := ops * *payloadLen
 
-		fmt.Printf("done: %dns/iteration\n", int(t1.Sub(t0).Nanoseconds())/(*iterations))
+		fmt.Printf("done: %dns/iteration, %d ops/sec, %d bytes/sec\n", rtt, ops, bandwidth)
 	}
 
 }
