@@ -1,14 +1,16 @@
 package main
 
 import (
-	"fmt"
-	"flag"
-	"time"
 	"crypto/aes"
-	"crypto/rand"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
+	"flag"
+	"fmt"
+	"time"
+
+	"golang.org/x/crypto/sha3"
 )
 
 type Test struct {
@@ -45,6 +47,15 @@ func NewSHA256(payloadLen int) func() {
 	return func() { sha256.Sum256(input) }
 }
 
+func NewSHA3Shake256(payloadLen int) func() {
+	input := NewRand(payloadLen)
+
+	return func() {
+		var hash = make([]byte, 64)
+		sha3.ShakeSum256(hash, input)
+	}
+}
+
 func NewECDSA(payloadLen int) func() {
 	pubkeyCurve := elliptic.P256()
 
@@ -55,23 +66,24 @@ func NewECDSA(payloadLen int) func() {
 	sigA, sigB, _ := ecdsa.Sign(rand.Reader, privatekey, digestA[:])
 
 	return func() {
-			digestB := sha256.Sum256(input)
-			ecdsa.Verify(&privatekey.PublicKey, digestB[:], sigA, sigB)
-		}
+		digestB := sha256.Sum256(input)
+		ecdsa.Verify(&privatekey.PublicKey, digestB[:], sigA, sigB)
+	}
 }
 
 func main() {
 	iterations := flag.Int("iterations", 100, "the number of iterations per test")
-	payloadLen := flag.Int("payload", 1 * 1024, "the size of the payload to use")
+	payloadLen := flag.Int("payload", 1*1024, "the size of the payload to use")
 
-	flag.Parse();
+	flag.Parse()
 
 	tests := []Test{
-		Test{"null", func() {} },
+		Test{"null", func() {}},
 		//Test{"timer validation", func() { time.Sleep(100 * time.Microsecond)} },
-		Test{"AES", NewAES(*payloadLen) },
-		Test{"SHA256", NewSHA256(*payloadLen) },
-		Test{"ECDSA verify", NewECDSA(*payloadLen) },
+		Test{"AES", NewAES(*payloadLen)},
+		Test{"SHA256", NewSHA256(*payloadLen)},
+		Test{"SHA3 SHAKE256", NewSHA3Shake256(*payloadLen)},
+		Test{"ECDSA verify", NewECDSA(*payloadLen)},
 	}
 
 	fmt.Printf("iterations: %d payloadLen: %d\n", *iterations, *payloadLen)
@@ -81,7 +93,7 @@ func main() {
 		fmt.Print("Running test \"" + test.Name + "\"...")
 
 		t0 := time.Now()
-		for i := 0; i<*iterations; i++ {
+		for i := 0; i < *iterations; i++ {
 			test.Func()
 		}
 		t1 := time.Now()
