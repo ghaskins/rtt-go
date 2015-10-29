@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"crypto/sha512"
 	"flag"
 	"fmt"
 	"time"
@@ -56,6 +57,12 @@ func NewSHA3Shake256(payloadLen int) func() {
 	}
 }
 
+func NewSHA512256(payloadLen int) func() {
+	input := NewRand(payloadLen)
+
+	return func() { sha512.Sum512_256(input) }
+}
+
 func NewECDSA(payloadLen int) func() {
 	pubkeyCurve := elliptic.P256()
 
@@ -83,6 +90,7 @@ func main() {
 		Test{"AES", NewAES(*payloadLen)},
 		Test{"SHA256", NewSHA256(*payloadLen)},
 		Test{"SHA3 SHAKE256", NewSHA3Shake256(*payloadLen)},
+		Test{"SHA512/256", NewSHA512256(*payloadLen)},
 		Test{"ECDSA verify", NewECDSA(*payloadLen)},
 	}
 
