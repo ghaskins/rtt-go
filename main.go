@@ -49,9 +49,9 @@ func NewSHA256(payloadLen int) func() {
 
 func NewSHA3Shake256(payloadLen int) func() {
 	input := NewRand(payloadLen)
+	var hash = make([]byte, 64)
 
 	return func() {
-		var hash = make([]byte, 64)
 		sha3.ShakeSum256(hash, input)
 	}
 }
