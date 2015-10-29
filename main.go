@@ -46,7 +46,7 @@ func NewSHA256(payloadLen int) func() {
 }
 
 func NewECDSA(payloadLen int) func() {
-	pubkeyCurve := elliptic.P384()
+	pubkeyCurve := elliptic.P256()
 
 	privatekey := new(ecdsa.PrivateKey)
 	privatekey, _ = ecdsa.GenerateKey(pubkeyCurve, rand.Reader) // this generates a public & private key pair
@@ -56,10 +56,7 @@ func NewECDSA(payloadLen int) func() {
 
 	return func() {
 			digestB := sha256.Sum256(input)
-			verified := ecdsa.Verify(&privatekey.PublicKey, digestB[:], sigA, sigB)
-			if verified == false {
-				panic("signature verification failed")
-			}
+			ecdsa.Verify(&privatekey.PublicKey, digestB[:], sigA, sigB)
 		}
 }
 
