@@ -92,6 +92,7 @@ func main() {
 		Test{"SHA3 SHAKE256", NewSHA3Shake256(*payloadLen)},
 		Test{"SHA512/256", NewSHA512256(*payloadLen)},
 		Test{"ECDSA verify", NewECDSA(*payloadLen)},
+		Test{"TLS", NewTLS(*payloadLen)},
 	}
 
 	fmt.Printf("iterations: %d payloadLen: %d\n", *iterations, *payloadLen)
