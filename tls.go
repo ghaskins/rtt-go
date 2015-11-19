@@ -74,7 +74,7 @@ func NewTLS(payloadLen int) func() {
 	laddr := "./rtt-go-tls.unix"
 	cert,err := tls.X509KeyPair([]byte(certPEM), []byte(keyPEM))
 
-	// Start our listener in common-context so we dont race with the registration
+	// Start our listener in common-context so we don't race with the registration
 	listener, err := tls.Listen("unix", laddr, newServerConfig(&cert))
 	if err != nil {
 		panic(err)
