@@ -15,7 +15,7 @@ func NewUDS(payloadLen int) func() {
 		panic(err)
 	}
 
-	go func () {
+	go func() {
 		conn, err := listener.Accept()
 		if err != nil {
 			panic(err)

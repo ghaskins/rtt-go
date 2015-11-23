@@ -63,7 +63,20 @@ func NewSHA512256(payloadLen int) func() {
 	return func() { sha512.Sum512_256(input) }
 }
 
-func NewECDSA(payloadLen int) func() {
+func NewECDSASign(payloadLen int) func() {
+	pubkeyCurve := elliptic.P256()
+
+	privatekey := new(ecdsa.PrivateKey)
+	privatekey, _ = ecdsa.GenerateKey(pubkeyCurve, rand.Reader) // this generates a public & private key pair
+	input := NewRand(payloadLen)
+
+	return func() {
+		digestA := sha256.Sum256(input)
+		ecdsa.Sign(rand.Reader, privatekey, digestA[:])
+	}
+}
+
+func NewECDSAVerify(payloadLen int) func() {
 	pubkeyCurve := elliptic.P256()
 
 	privatekey := new(ecdsa.PrivateKey)
@@ -91,7 +104,8 @@ func main() {
 		Test{"SHA256", NewSHA256(*payloadLen)},
 		Test{"SHA3 SHAKE256", NewSHA3Shake256(*payloadLen)},
 		Test{"SHA512/256", NewSHA512256(*payloadLen)},
-		Test{"ECDSA verify", NewECDSA(*payloadLen)},
+		Test{"ECDSA sign", NewECDSASign(*payloadLen)},
+		Test{"ECDSA verify", NewECDSAVerify(*payloadLen)},
 		Test{"UDS", NewUDS(*payloadLen)},
 		Test{"TLS", NewTLS(*payloadLen)},
 	}

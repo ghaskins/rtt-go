@@ -61,7 +61,7 @@ yGiXlnQv0rl5bbW2XeH4aU4bwOpOF+V3Svo62IxrLYyYm3ldn+6Z
 
 func newServerConfig(self *tls.Certificate) *tls.Config {
 	config := &tls.Config{
-		Certificates:       make([]tls.Certificate, 1),
+		Certificates: make([]tls.Certificate, 1),
 	}
 
 	config.Certificates[0] = *self
@@ -72,7 +72,7 @@ func newServerConfig(self *tls.Certificate) *tls.Config {
 func NewTLS(payloadLen int) func() {
 
 	laddr := "./rtt-go-tls.unix"
-	cert,err := tls.X509KeyPair([]byte(certPEM), []byte(keyPEM))
+	cert, err := tls.X509KeyPair([]byte(certPEM), []byte(keyPEM))
 
 	// Start our listener in common-context so we don't race with the registration
 	listener, err := tls.Listen("unix", laddr, newServerConfig(&cert))
@@ -80,7 +80,7 @@ func NewTLS(payloadLen int) func() {
 		panic(err)
 	}
 
-	go func () {
+	go func() {
 		conn, err := listener.Accept()
 		if err != nil {
 			panic(err)
@@ -104,7 +104,7 @@ func NewTLS(payloadLen int) func() {
 	buf := make([]byte, payloadLen)
 
 	return func() {
-			conn.Write(buf)
-			conn.Read(buf)
+		conn.Write(buf)
+		conn.Read(buf)
 	}
 }
