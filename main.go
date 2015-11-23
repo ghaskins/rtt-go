@@ -69,10 +69,10 @@ func NewECDSASign(payloadLen int) func() {
 	privatekey := new(ecdsa.PrivateKey)
 	privatekey, _ = ecdsa.GenerateKey(pubkeyCurve, rand.Reader) // this generates a public & private key pair
 	input := NewRand(payloadLen)
+	digest := sha256.Sum256(input)
 
 	return func() {
-		digestA := sha256.Sum256(input)
-		ecdsa.Sign(rand.Reader, privatekey, digestA[:])
+		ecdsa.Sign(rand.Reader, privatekey, digest[:])
 	}
 }
 
@@ -82,12 +82,11 @@ func NewECDSAVerify(payloadLen int) func() {
 	privatekey := new(ecdsa.PrivateKey)
 	privatekey, _ = ecdsa.GenerateKey(pubkeyCurve, rand.Reader) // this generates a public & private key pair
 	input := NewRand(payloadLen)
-	digestA := sha256.Sum256(input)
-	sigA, sigB, _ := ecdsa.Sign(rand.Reader, privatekey, digestA[:])
+	digest := sha256.Sum256(input)
+	sigA, sigB, _ := ecdsa.Sign(rand.Reader, privatekey, digest[:])
 
 	return func() {
-		digestB := sha256.Sum256(input)
-		ecdsa.Verify(&privatekey.PublicKey, digestB[:], sigA, sigB)
+		ecdsa.Verify(&privatekey.PublicKey, digest[:], sigA, sigB)
 	}
 }
 
