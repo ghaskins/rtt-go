@@ -70,24 +70,87 @@ func newServerConfig(self *tls.Certificate) *tls.Config {
 	return config
 }
 
-func serve(listener net.Listener, len int) {
-	conn, err := listener.Accept()
+type Connector interface {
+	Address() string
+	Listen() (net.Listener, error)
+	Dial() (net.Conn, error)
+}
+
+//---------------------------------------
+// TLS
+//---------------------------------------
+type tlsConnector struct {
+	addr string
+}
+
+func (self *tlsConnector) Address() string {
+	return self.addr
+}
+
+func (self *tlsConnector) Listen() (net.Listener, error) {
+	cert, _ := tls.X509KeyPair([]byte(certPEM), []byte(keyPEM))
+
+	return tls.Listen("unix", self.addr, newServerConfig(&cert))
+}
+
+func (self *tlsConnector) Dial() (net.Conn, error) {
+	return tls.Dial("unix", self.addr, &tls.Config{InsecureSkipVerify: true})
+}
+
+//---------------------------------------
+// UDS
+//---------------------------------------
+type udsConnector struct {
+	addr string
+}
+
+func (self *udsConnector) Address() string {
+	return self.addr
+}
+
+func (self *udsConnector) Listen() (net.Listener, error) {
+	return net.Listen("unix", self.addr)
+}
+
+func (self *udsConnector) Dial() (net.Conn, error) {
+	return net.Dial("unix", self.addr)
+}
+
+//---------------------------------------
+// Common Initializer
+//---------------------------------------
+
+func newConnector(connector Connector, payloadLen int) func() {
+
+	// Start our listener in common-context so we don't race with the registration
+	listener, err := connector.Listen()
 	if err != nil {
 		panic(err)
 	}
 
-	buf := make([]byte, len)
+	go func() {
+		conn, err := listener.Accept()
 
-	for {
-		conn.Read(buf)
-		conn.Write(buf)
+		if err != nil {
+			panic(err)
+		}
+
+		buf := make([]byte, payloadLen)
+
+		for {
+			conn.Read(buf)
+			conn.Write(buf)
+		}
+	}()
+
+	conn, err := connector.Dial()
+	if err != nil {
+		panic(err)
 	}
-}
 
-func complete(conn net.Conn, laddr string, len int) func() {
-	os.Remove(laddr)
+	os.Remove(connector.Address())
 
-	buf := make([]byte, len)
+	buf := make([]byte, payloadLen)
 
 	return func() {
 		conn.Write(buf)
@@ -96,42 +159,9 @@ func complete(conn net.Conn, laddr string, len int) func() {
 }
 
 func NewTLS(payloadLen int) func() {
-
-	laddr := "./rtt-go-tls.unix"
-	cert, err := tls.X509KeyPair([]byte(certPEM), []byte(keyPEM))
-
-	// Start our listener in common-context so we don't race with the registration
-	listener, err := tls.Listen("unix", laddr, newServerConfig(&cert))
-	if err != nil {
-		panic(err)
-	}
-
-	go serve(listener, payloadLen)
-
-	conn, err := tls.Dial("unix", laddr, &tls.Config{InsecureSkipVerify: true})
-	if err != nil {
-		panic(err)
-	}
-
-	return complete(conn, laddr, payloadLen)
+	return newConnector(&tlsConnector{addr: "./rtt-go.tls"}, payloadLen)
 }
 
 func NewUDS(payloadLen int) func() {
-
-	laddr := "./rtt-go-plain.unix"
-
-	// Start our listener in common-context so we don't race with the registration
-	listener, err := net.Listen("unix", laddr)
-	if err != nil {
-		panic(err)
-	}
-
-	go serve(listener, payloadLen)
-
-	conn, err := net.Dial("unix", laddr)
-	if err != nil {
-		panic(err)
-	}
-
-	return complete(conn, laddr, payloadLen)
+	return newConnector(&udsConnector{addr: "./rtt-go.uds"}, payloadLen)
 }
