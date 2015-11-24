@@ -4,9 +4,11 @@ import (
 	"crypto/aes"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/rsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/sha512"
+	"crypto"
 	"flag"
 	"fmt"
 	"time"
@@ -63,6 +65,20 @@ func NewSHA512256(payloadLen int) func() {
 	return func() { sha512.Sum512_256(input) }
 }
 
+func NewRSASign(payloadLen int) func() {
+
+	privatekey := new(rsa.PrivateKey)
+	privatekey, _ = rsa.GenerateKey(rand.Reader, 2048) // this generates a public & private key pair
+	input := NewRand(payloadLen)
+	digest := sha256.Sum256(input)
+	signerOpts := crypto.SignerOpts{}
+
+	return func() {
+		privatekey.Sign(rand.Reader, digest[:], signerOpts)
+	}
+}
+
+
 func NewECDSASign(payloadLen int) func() {
 	pubkeyCurve := elliptic.P256()
 
@@ -103,6 +119,7 @@ func main() {
 		Test{"SHA256", NewSHA256(*payloadLen)},
 		Test{"SHA3 SHAKE256", NewSHA3Shake256(*payloadLen)},
 		Test{"SHA512/256", NewSHA512256(*payloadLen)},
+		Test{"RSA sign", NewRSASign(*payloadLen)},
 		Test{"ECDSA sign", NewECDSASign(*payloadLen)},
 		Test{"ECDSA verify", NewECDSAVerify(*payloadLen)},
 		Test{"UDS", NewUDS(*payloadLen)},
