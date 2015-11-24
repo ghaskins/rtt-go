@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/tls"
+	"net"
 	"os"
 )
 
@@ -69,6 +70,31 @@ func newServerConfig(self *tls.Certificate) *tls.Config {
 	return config
 }
 
+func serve(listener net.Listener, len int) {
+	conn, err := listener.Accept()
+	if err != nil {
+		panic(err)
+	}
+
+	buf := make([]byte, len)
+
+	for {
+		conn.Read(buf)
+		conn.Write(buf)
+	}
+}
+
+func complete(conn net.Conn, laddr string, len int) func() {
+	os.Remove(laddr)
+
+	buf := make([]byte, len)
+
+	return func() {
+		conn.Write(buf)
+		conn.Read(buf)
+	}
+}
+
 func NewTLS(payloadLen int) func() {
 
 	laddr := "./rtt-go-tls.unix"
@@ -80,31 +106,32 @@ func NewTLS(payloadLen int) func() {
 		panic(err)
 	}
 
-	go func() {
-		conn, err := listener.Accept()
-		if err != nil {
-			panic(err)
-		}
-
-		buf := make([]byte, payloadLen)
-
-		for {
-			conn.Read(buf)
-			conn.Write(buf)
-		}
-	}()
+	go serve(listener, payloadLen)
 
 	conn, err := tls.Dial("unix", laddr, &tls.Config{InsecureSkipVerify: true})
 	if err != nil {
 		panic(err)
 	}
 
-	os.Remove(laddr)
+	return complete(conn, laddr, payloadLen)
+}
 
-	buf := make([]byte, payloadLen)
+func NewUDS(payloadLen int) func() {
 
-	return func() {
-		conn.Write(buf)
-		conn.Read(buf)
+	laddr := "./rtt-go-plain.unix"
+
+	// Start our listener in common-context so we don't race with the registration
+	listener, err := net.Listen("unix", laddr)
+	if err != nil {
+		panic(err)
 	}
+
+	go serve(listener, payloadLen)
+
+	conn, err := net.Dial("unix", laddr)
+	if err != nil {
+		panic(err)
+	}
+
+	return complete(conn, laddr, payloadLen)
 }
